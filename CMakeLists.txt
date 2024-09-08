@@ -38,6 +38,8 @@ else()
     else()
         add_executable(EasyShot
             ${PROJECT_SOURCES}
+            shotcut.h shotcut.cpp shotcut.ui
+            shotarea.h shotarea.cpp
         )
     endif()
 endif()
