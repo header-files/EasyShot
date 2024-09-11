@@ -37,6 +37,9 @@ public:
     void setRightDown(QPoint rightDown);
     QPoint getRightDown();
 
+    void setShotStart(QPoint shotStart);
+    QPoint getShotStart();
+
     void setMoveStart(QPoint moveStart);
     QPoint getMoveStart();
 
@@ -45,7 +48,7 @@ private:
 
     int screenW, screenH; // 屏幕宽、高
 
-    QPoint leftUp, rightDown, moveStart; // 截图区域左上以及右下坐标、拖拽起始坐标
+    QPoint leftUp, rightDown, shotStart, moveStart; // 截图区域左上以及右下坐标、截图区域起点、拖拽起始坐标
 };
 
 #endif // SHOTAREA_H

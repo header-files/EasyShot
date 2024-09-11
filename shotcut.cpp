@@ -1,5 +1,10 @@
 #include "shotcut.h"
 
+#include <QApplication>
+#include <QScreen>
+#include <QPainter>
+#include <QLabel>
+
 ShotCut::ShotCut(QWidget *parent)
     : QWidget{parent}
 {
@@ -13,10 +18,15 @@ ShotCut::ShotCut(QWidget *parent)
     shotArea.setScreenW(screenSize.width());
     shotArea.setScreenH(screenSize.height());
 
-    QPoint point(-1, -1);
+    // 开始即全屏截图
+    QPoint point(0, 0);
     shotArea.setLeftUp(point);
-    shotArea.setRightDown(point);
+    shotArea.setShotStart(point);
     shotArea.setMoveStart(point);
+
+    point.setX(screenSize.width());
+    point.setY(screenSize.height());
+    shotArea.setRightDown(point);
 }
 
 ShotCut::~ShotCut()
@@ -50,29 +60,29 @@ void ShotCut::showEvent(QShowEvent *enent)
     QPainter painter(bgImg);
     // 添加灰色透明遮挡
     QPixmap grayPix(screenShot.size().width(), screenShot.size().height());
-    grayPix.fill((QColor(127,127,127,100))); // 灰色， 透明度 100
+    grayPix.fill((QColor(127, 127, 127, 100))); // 灰色，透明度 100
     painter.drawPixmap(0, 0, grayPix);
 }
 
 // 重写绘图事件（窗口更新）
-void ShotCut::paintEvent(QPaintEvent *enent){
+void ShotCut::paintEvent(QPaintEvent *enent)
+{
     QPainter painter(this);
     painter.drawPixmap(rect(), *bgImg); // 显示带灰色透明遮挡全屏图片
 
     shotArea.checkArea(); // 检查并修正截图区域坐标
 
-    QPoint leftUp = shotArea.getLeftUp();
-    QPoint rightDown = shotArea.getRightDown();
+    int startX = shotArea.getLeftUp().x();
+    int startY = shotArea.getLeftUp().y();
 
-    int startX = leftUp.x();
-    int startY = leftUp.y();
-
-    int areaW = rightDown.x() - startX;
-    int areaH = rightDown.y() - startY;
+    int areaW = shotArea.getRightDown().x() - startX;
+    int areaH = shotArea.getRightDown().y() - startY;
 
     // 显示截图区域
-    painter.drawPixmap(startX, startY,
-                       screenShot.copy(startX, startY, areaW, areaH));
+    if(areaW != 0 && areaH != 0){
+        painter.drawPixmap(startX, startY,
+                           screenShot.copy(startX, startY, areaW, areaH));
+    }
 
     // 沿截图区域绘制矩形框
     QPen pen;
@@ -85,10 +95,29 @@ void ShotCut::paintEvent(QPaintEvent *enent){
 }
 
 // 重写keyPressEvent以处理ESC键
-void ShotCut::keyPressEvent(QKeyEvent *event){
+void ShotCut::keyPressEvent(QKeyEvent *event)
+{
     if (event->key() == Qt::Key_Escape) {
         hide();
-    } else {
+    } else if (event->modifiers().testFlag(Qt::ControlModifier) && event->key() == Qt::Key_T) {
+        // TODO：待优化 1. 贴图触发方式 2. 贴图实现方式
+        // 按下 Ctrl+T， 贴图
+        hide();
+
+        int startX = shotArea.getLeftUp().x();
+        int startY = shotArea.getLeftUp().y();
+
+        int areaW = shotArea.getRightDown().x() - startX;
+        int areaH = shotArea.getRightDown().y() - startY;
+
+        if(areaW != 0 && areaH != 0){
+            QLabel *label = new QLabel;
+
+            label->setPixmap(screenShot.copy(startX, startY, areaW, areaH));
+            label->setWindowFlags(Qt::FramelessWindowHint);
+            label->show();
+        }
+    }  else {
         QWidget::keyPressEvent(event);
     }
 }
@@ -101,6 +130,8 @@ void ShotCut::mousePressEvent(QMouseEvent *event)
 
     if(status == ShotArea::N_SELECT){ // 未选择，按下鼠标，设置起点
         shotArea.setLeftUp(globalPos);
+        shotArea.setRightDown(globalPos);
+        shotArea.setShotStart(globalPos);
         shotArea.setStatus(ShotArea::START);
     }else if(status == ShotArea::END){ // 已设置终点，按下鼠标
         if(shotArea.ifInArea(globalPos)){ // 在选择区域内，拖拽区域
@@ -108,6 +139,8 @@ void ShotCut::mousePressEvent(QMouseEvent *event)
             shotArea.setStatus(ShotArea::MOVE);
         }else{ // 在区域外，重新设置起点
             shotArea.setLeftUp(globalPos);
+            shotArea.setRightDown(globalPos);
+            shotArea.setShotStart(globalPos);
             shotArea.setStatus(ShotArea::START);
         }
     }
@@ -134,11 +167,14 @@ void ShotCut::mouseReleaseEvent(QMouseEvent *event)
 // 重写鼠标移动事件
 void ShotCut::mouseMoveEvent(QMouseEvent *event)
 {
+    QPoint globalPos = event->globalPos();
     ShotArea::STATUS status = shotArea.getStatus();
 
-    if(status == ShotArea::MOVE){ // 已设置拖拽起点，实时更新截图区域坐标
-        QPoint globalPos = event->globalPos();
+    if(status == ShotArea::START){ // 已设置截图区域起点，实时更新截图区域坐标
+        shotArea.setRightDown(globalPos);
+    }else if(status == ShotArea::MOVE){ // 已设置拖拽起点，实时更新截图区域坐标
         shotArea.updateArea(globalPos);
+        shotArea.setMoveStart(globalPos);
     }
 
     update();

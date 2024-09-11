@@ -11,64 +11,63 @@ bool ShotArea::ifInArea(QPoint point)
     int y = point.y();
 
     return (x >= leftUp.x() && x <= rightDown.x() &&
-        y >= leftUp.y() && y <= rightDown.y());
+            y >= leftUp.y() && y <= rightDown.y());
 }
 
 // 更新截图区域坐标
 void ShotArea::updateArea(QPoint nowPoint)
 {
+    checkArea(); // 先检查左上以及右下坐标是否符合要求
+
     int delX = nowPoint.x() - moveStart.x();
     int delY = nowPoint.y() - moveStart.y();
 
-    if((leftUp.x() + delX) < 0){
+    leftUp.setX(leftUp.x() + delX);
+    leftUp.setY(leftUp.y() + delY);
+    rightDown.setX(rightDown.x() + delX);
+    rightDown.setY(rightDown.y() + delY);
+
+    if(leftUp.x() < 0){
         rightDown.setX(rightDown.x() - leftUp.x());
         leftUp.setX(0);
-    }else{
-        leftUp.setX(leftUp.x() + delX);
     }
 
-    if((leftUp.y() + delY) < 0){
+    if(leftUp.y() < 0){
         rightDown.setY(rightDown.y() - leftUp.y());
         leftUp.setY(0);
-    }else{
-        leftUp.setY(leftUp.y() + delY);
     }
 
-    if((rightDown.x() + delX) > screenW){
+    if(rightDown.x() > screenW){
         leftUp.setX(screenW - (rightDown.x() - leftUp.x()));
         rightDown.setX(screenW);
-    }else{
-        rightDown.setX(rightDown.x() + delX);
     }
 
-    if((rightDown.y() + delY) > screenH){
-        rightDown.setY(screenH - (rightDown.y() - leftUp.y()));
+    if(rightDown.y() > screenH){
+        leftUp.setY(screenH - (rightDown.y() - leftUp.y()));
         rightDown.setY(screenH);
-    }else{
-        rightDown.setY(rightDown.y() + delY);
     }
+
+    shotStart.setX(leftUp.x()); // 修改截图区域起点坐标，防止影响后面的 checkArea
+    shotStart.setY(leftUp.y());
 }
 
 // 检查起点以及终点坐标是否符合一个在左上一个在右下
 void ShotArea::checkArea()
 {
-    int startX = leftUp.x();
-    int startY = leftUp.y();
+    int startX = shotStart.x();
+    int startY = shotStart.y();
 
     int endX = rightDown.x();
     int endY = rightDown.y();
 
-    int temp = 0;
     if(startX > endX){
-        temp = startX;
-        leftUp.setX(rightDown.x());
-        rightDown.setX(temp);
+        leftUp.setX(endX);
+        rightDown.setX(startX);
     }
 
     if(startY > endY){
-        temp = startY;
-        leftUp.setY(rightDown.y());
-        rightDown.setY(temp);
+        leftUp.setY(endY);
+        rightDown.setY(startY);
     }
 }
 
@@ -117,6 +116,16 @@ void ShotArea::setRightDown(QPoint rightDown)
 QPoint ShotArea::getRightDown()
 {
     return rightDown;
+}
+
+
+void ShotArea::setShotStart(QPoint shotStart)
+{
+    this->shotStart = shotStart;
+}
+QPoint ShotArea::getShotStart()
+{
+    return shotStart;
 }
 
 void ShotArea::setMoveStart(QPoint moveStart)

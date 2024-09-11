@@ -3,10 +3,7 @@
 
 #include "shotarea.h"
 
-#include <QApplication>
 #include <QWidget>
-#include <QScreen>
-#include <QPainter>
 #include <QPaintEvent>
 
 class ShotCut : public QWidget
